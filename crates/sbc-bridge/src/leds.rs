@@ -1,5 +1,6 @@
 //! LED driver: latch + clear combo + change detection. Pure (no I/O); the session writes the reports.
 
+use sbc_core::input::gear_index;
 use sbc_core::{
     GearLedStyle, LED_REPORT_LEN, LedLatch, LedLevels, LedModes, SbcState, encode_leds,
 };
@@ -17,6 +18,8 @@ pub struct LedDriver {
     combo_ms: u64,
     start_since: Option<u64>,
     combo_fired: bool,
+    /// Last real gear; raw 0 means "between gears" and must not blank the gear LEDs.
+    gear_held: i8,
     last: Option<[u8; LED_REPORT_LEN]>,
 }
 
@@ -37,6 +40,7 @@ impl LedDriver {
             combo_ms,
             start_since: None,
             combo_fired: false,
+            gear_held: 0,
             last: None,
         }
     }
@@ -62,7 +66,10 @@ impl LedDriver {
         } else {
             lit
         };
-        let report = encode_leds(lit, s.gear, self.gear, self.levels);
+        if gear_index(s.gear).is_some() {
+            self.gear_held = s.gear;
+        }
+        let report = encode_leds(lit, self.gear_held, self.gear, self.levels);
         debug_assert_eq!(report.len(), LED_REPORT_LEN);
         if self.last == Some(report) {
             return None;
@@ -128,15 +135,51 @@ mod tests {
         let _ = d.next(&st(0), 10);
         let _ = d.next(&st(START_BIT), 100); // Start LED toggles on
         let cleared = d.next(&st(START_BIT), 2200).unwrap();
-        assert!(cleared.iter().all(|b| *b == 0));
+        assert_eq!(cleared, sbc_core::blank_report());
         assert_eq!(d.next(&st(START_BIT), 2300), None, "fires once per hold");
         assert_eq!(d.next(&st(0), 2400), None, "release does not relight");
     }
 
     #[test]
+    fn gear_leds_hold_through_neutral_gap() {
+        let modes = LedModes::new(LED_BUTTON_MASK, 0).unwrap();
+        let mut d = LedDriver::new(modes, LedLevels::default(), GearLedStyle::Position, 0);
+        let _ = d.connect_report(true);
+        let third = d
+            .next(
+                &SbcState {
+                    gear: 3,
+                    ..SbcState::default()
+                },
+                0,
+            )
+            .unwrap();
+        assert_eq!(third[19], 0xF0);
+        let between = SbcState {
+            gear: 0,
+            ..SbcState::default()
+        };
+        assert_eq!(
+            d.next(&between, 10),
+            None,
+            "raw 0 between gears: no LED change"
+        );
+        let fourth = d
+            .next(
+                &SbcState {
+                    gear: 4,
+                    ..SbcState::default()
+                },
+                20,
+            )
+            .unwrap();
+        assert_eq!((fourth[19], fourth[20]), (0x00, 0x0F));
+    }
+
+    #[test]
     fn connect_report_is_all_off() {
         let mut d = driver();
-        assert!(d.connect_report(true).iter().all(|b| *b == 0));
+        assert_eq!(d.connect_report(true), sbc_core::blank_report());
         assert_eq!(d.next(&st(0), 0), None);
     }
 }

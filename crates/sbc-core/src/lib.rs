@@ -9,8 +9,9 @@ pub mod led;
 pub mod ledout;
 pub mod names;
 pub mod pad;
+pub mod xid;
 
 pub use input::{DecodeError, INPUT_REPORT_LEN, SbcState, decode};
 pub use led::{LedLatch, LedModes};
-pub use ledout::{GearLedStyle, LED_REPORT_LEN, LedLevels, encode as encode_leds};
+pub use ledout::{GearLedStyle, LED_REPORT_LEN, LedLevels, blank_report, encode as encode_leds};
 pub use pad::{PadMapper, PadState};

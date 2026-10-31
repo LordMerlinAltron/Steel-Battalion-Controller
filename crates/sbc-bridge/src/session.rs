@@ -43,7 +43,8 @@ pub struct Session<'a> {
 impl<'a> Session<'a> {
     /// Wrap an opened device.
     pub fn new(dev: SbcDevice, vjoy: &'a Vjoy, cfg: &Config) -> Self {
-        let leds = cfg.leds.enabled.then(|| {
+        let leds_ok = cfg.leds.enabled && check_xid(&dev);
+        let leds = leds_ok.then(|| {
             LedDriver::new(
                 cfg.led_modes(),
                 cfg.led_levels(),
@@ -131,5 +132,41 @@ impl<'a> Session<'a> {
 
     fn now_ms(&self) -> u64 {
         u64::try_from(self.t0.elapsed().as_millis()).unwrap_or(u64::MAX)
+    }
+}
+
+/// Log the XID descriptor; LEDs stay enabled unless the device reports a different output size.
+fn check_xid(dev: &SbcDevice) -> bool {
+    let raw = match dev.xid_descriptor() {
+        Ok(r) => r,
+        Err(e) => {
+            log(&format!(
+                "XID descriptor unavailable ({e}); assuming 22-byte LED report"
+            ));
+            return true;
+        }
+    };
+    match sbc_core::xid::parse(&raw) {
+        Ok(x) if usize::from(x.max_output) == sbc_core::LED_REPORT_LEN => {
+            log(&format!(
+                "XID type {:02X}/{:02X}, in {} out {}",
+                x.device_type, x.sub_type, x.max_input, x.max_output
+            ));
+            true
+        }
+        Ok(x) => {
+            log(&format!(
+                "XID output report is {} bytes, expected {}; LEDs disabled",
+                x.max_output,
+                sbc_core::LED_REPORT_LEN
+            ));
+            false
+        }
+        Err(e) => {
+            log(&format!(
+                "XID descriptor unreadable ({e:?}); assuming 22-byte LED report"
+            ));
+            true
+        }
     }
 }

@@ -1,4 +1,4 @@
-//! Human names for the 39 raw button bits (index = bit). Source: 2019 driver, unverified.
+//! Human names for the 39 raw button bits (index = bit). Sources: xboxdevwiki, 2019 driver.
 
 use crate::input::BUTTON_COUNT;
 

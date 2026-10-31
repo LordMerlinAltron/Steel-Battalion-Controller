@@ -306,6 +306,7 @@ name = "sbc-usb"
 version = "0.1.0"
 dependencies = [
  "nusb",
+ "sbc-core",
 ]
 
 [[package]]

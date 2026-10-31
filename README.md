@@ -39,10 +39,11 @@ cargo run -p sbc-capture -- led-probe   # light each LED id, print expected cont
 
 ## Credits
 Protocol knowledge from:
+- [xboxdevwiki — Xbox Input Devices](https://xboxdevwiki.net/Xbox_Input_Devices) (USB/XID descriptors, 22-byte LED report, tuner and gear semantics)
 - [caosdoar/SteelBattalionDriver](https://github.com/caosdoar/SteelBattalionDriver) — Oscar Sebio Cajaraville, 2019 (input layout)
-- [SteelBattalion.NET](https://github.com/dmanning23/SteelBattalion.NET) — Joseph Coutcher, 2010 (endpoints, LED report)
+- [SteelBattalion.NET](https://github.com/dmanning23/SteelBattalion.NET) — Joseph Coutcher, 2010 (endpoints, LED ids)
 
-No code from either project is included.
+No code from these projects is included. See [docs/protocol.md](docs/protocol.md) for which source backs which fact.
 
 ## License
 MIT — see [LICENSE](LICENSE).

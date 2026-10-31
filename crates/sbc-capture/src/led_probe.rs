@@ -3,7 +3,10 @@
 
 use std::time::Duration;
 
-use sbc_core::ledout::{GEAR_LED_BASE, LED_MAX_LEVEL, LED_REPORT_LEN, set_level};
+use sbc_core::ledout::{
+    FIRST_LED_ID, GEAR_LED_BASE, LAST_LED_ID, LED_MAX_LEVEL, LED_REPORT_LEN, blank_report,
+    set_level,
+};
 use sbc_core::names::button_name;
 use sbc_usb::{SbcDevice, UsbError};
 
@@ -17,16 +20,16 @@ const GEAR_NAMES: [&str; 7] = [
 pub fn run(opts: &Opts) -> Result<(), UsbError> {
     let mut dev = SbcDevice::open()?;
     let len = opts.led_len.unwrap_or(LED_REPORT_LEN).min(LED_REPORT_LEN);
-    let ids = u8::try_from(len.saturating_mul(2)).unwrap_or(u8::MAX);
     println!(
-        "OUT {:02X?}  len {len}  walking LED ids 0..{ids}",
-        dev.addrs().output
+        "OUT {:02X?}  len {len}  header {:02X?}  walking LED ids {FIRST_LED_ID}..={LAST_LED_ID}",
+        dev.addrs().output,
+        blank_report().get(..2).unwrap_or(&[])
     );
 
-    let mut report = [0u8; LED_REPORT_LEN];
+    let mut report = blank_report();
     send(&mut dev, &report, len, "all off")?;
-    for id in 0..ids {
-        report.fill(0);
+    for id in FIRST_LED_ID..=LAST_LED_ID {
+        report = blank_report();
         set_level(&mut report, id, LED_MAX_LEVEL);
         let label = format!(
             "id {id:>2}  byte {:>2} {}  expect {}",
@@ -37,11 +40,12 @@ pub fn run(opts: &Opts) -> Result<(), UsbError> {
         send(&mut dev, &report, len, &label)?;
         std::thread::sleep(opts.dwell);
     }
-    report.fill(0xFF);
+    for id in FIRST_LED_ID..=LAST_LED_ID {
+        set_level(&mut report, id, LED_MAX_LEVEL);
+    }
     send(&mut dev, &report, len, "all on")?;
     std::thread::sleep(opts.dwell);
-    report.fill(0);
-    send(&mut dev, &report, len, "all off")?;
+    send(&mut dev, &blank_report(), len, "all off")?;
     Ok(())
 }
 

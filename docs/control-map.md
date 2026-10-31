@@ -67,8 +67,8 @@ LED id = vJoy button number for buttons 4–33 (see [protocol.md](protocol.md)).
 
 | vJoy | Source | Behavior |
 |---|---|---|
-| 40–46 | Gear R, N, 1, 2, 3, 4, 5 | held while lever in position; LED ids 35–41 |
-| 47–62 | Tuner position 0–15 | held while dial at position |
+| 40–46 | Gear R, N, 1, 2, 3, 4, 5 | held while lever in position (none while between gears); LED ids 35–41 keep the last gear |
+| 47–62 | Tuner position 0–15 | held while dial at position (0 = 9 o'clock, 12 = 6 o'clock, 13–15 blank arc) |
 | 63 | Tuner step + | pulse on each step up |
 | 64 | Tuner step − | pulse on each step down |
 | 65–69 | Toggles 35–39 switched ON | pulse |
