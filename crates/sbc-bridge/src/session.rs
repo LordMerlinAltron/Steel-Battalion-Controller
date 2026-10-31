@@ -126,7 +126,7 @@ impl<'a> Session<'a> {
             ));
             self.leds = None;
         }
-        debug_assert!(!report.is_empty());
+        debug_assert!(report.len() <= sbc_usb::MAX_REPORT);
     }
 
     fn now_ms(&self) -> u64 {

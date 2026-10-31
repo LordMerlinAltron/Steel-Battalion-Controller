@@ -70,7 +70,7 @@ fn send(
     dev.write(data, WRITE_TIMEOUT)?;
     println!("{label}");
     debug_assert!(len <= LED_REPORT_LEN);
-    debug_assert!(!label.is_empty());
+    debug_assert_eq!(data.len(), len);
     Ok(())
 }
 

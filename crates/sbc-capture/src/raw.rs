@@ -43,6 +43,6 @@ pub fn run(opts: &Opts) -> Result<(), Box<dyn std::error::Error>> {
 fn save(dir: &Path, index: usize, pkt: &[u8]) -> std::io::Result<()> {
     let path = dir.join(format!("pkt_{index:04}.bin"));
     std::fs::write(&path, pkt)?;
-    debug_assert!(!pkt.is_empty());
+    debug_assert!(pkt.len() <= MAX_REPORT);
     Ok(())
 }

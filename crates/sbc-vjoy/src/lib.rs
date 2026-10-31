@@ -157,7 +157,7 @@ impl Vjoy {
     #[cfg(not(windows))]
     fn acquire_platform(_id: u8, dll: &Path, need_buttons: u32) -> Result<Self, VjoyError> {
         debug_assert!(need_buttons <= 128);
-        debug_assert!(!dll.as_os_str().is_empty());
+        debug_assert!(dll.as_os_str().len() < 32_768, "path within Windows limit");
         Err(VjoyError::Unsupported)
     }
 
