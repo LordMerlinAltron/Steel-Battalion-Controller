@@ -1,0 +1,15 @@
+[package]
+name = "sbc-usb"
+description = "WinUSB/libusb adapter for the Steel Battalion controller (via nusb)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+nusb.workspace = true
+
+[lints]
+workspace = true

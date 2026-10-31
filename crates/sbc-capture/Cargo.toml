@@ -1,0 +1,17 @@
+[package]
+name = "sbc-capture"
+description = "Evidence tool: USB descriptors, live control dump, raw fixtures, LED probe"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+sbc-core.workspace = true
+sbc-usb.workspace = true
+nusb.workspace = true
+
+[lints]
+workspace = true

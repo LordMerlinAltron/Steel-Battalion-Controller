@@ -1,0 +1,21 @@
+# sbc-bridge configuration (consumed in Phase 3). Values marked (P1) depend on hardware capture.
+
+[vjoy]
+device_id = 1          # vJoy device slot used for the controller
+pulse_ms  = 60         # length of synthesized pulse buttons (toggle edges, tuner steps)
+
+[usb]
+read_timeout_ms = 100
+reconnect_ms    = 1000
+
+[leds]
+enabled          = true
+on_level         = 15     # 0..=15
+off_level        = 0      # >0 = dim backlight on unlit buttons
+reset_on_connect = true
+persist_state    = false
+clear_combo      = "start_hold_2s"
+
+[leds.mode]
+panel_buttons = "toggle"    # vJoy 4–33: press → on, press again → off; JoyToKey output stays momentary
+gear          = "position"  # position | progressive | off

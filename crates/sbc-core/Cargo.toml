@@ -1,0 +1,14 @@
+[package]
+name = "sbc-core"
+description = "Pure decode, mapping and LED logic for the Steel Battalion controller"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+
+[lints]
+workspace = true
