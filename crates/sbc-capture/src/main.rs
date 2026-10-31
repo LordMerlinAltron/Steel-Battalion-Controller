@@ -1,5 +1,7 @@
 //! `sbc-capture` — Phase 1 evidence tool for the Steel Battalion controller.
 
+#![forbid(unsafe_code)]
+
 mod info;
 mod led_probe;
 mod opts;

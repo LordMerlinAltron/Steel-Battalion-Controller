@@ -2,6 +2,8 @@
 //!
 //! No I/O, no allocation. Input: raw report bytes. Output: virtual joystick state and LED state.
 
+#![forbid(unsafe_code)]
+
 pub mod input;
 pub mod led;
 pub mod ledout;

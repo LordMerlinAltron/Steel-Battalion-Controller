@@ -9,9 +9,10 @@ Approach: user-mode bridge. **No custom kernel driver, no driver signing, Secure
 - [ ] Install signed vJoy; confirm `vJoy Device` status OK with Secure Boot ON  ← **blocker if this fails**
 - [ ] Bind SBC to WinUSB with Zadig
 - [ ] Rust toolchain + MSVC build tools
-- [ ] Repo scaffold (this branch)
+- [x] Repo scaffold (this branch)
+- [ ] Run `scripts/p0-check.ps1` (admin) → `logs/p0-check.txt`
 
-## P1 — Evidence capture (`sbc-capture`)
+## P1 — Evidence capture (`sbc-capture`) — run `scripts/p1-capture.ps1`
 - [ ] `info`: confirm endpoints IN `0x82` / OUT `0x01` → `docs/protocol.md`
 - [ ] `watch`: press every control, confirm name/bit → `docs/control-map.md` (🟡 → ✅)
 - [ ] Record gear raw values; confirm trigger mask (`0x02` vs `0x03`)
@@ -27,11 +28,11 @@ Approach: user-mode bridge. **No custom kernel driver, no driver signing, Secure
 - [ ] Tests from real fixtures
 
 ## P3 — Bridge (`sbc-bridge`)
-- [ ] vJoy FFI adapter (`sbc-vjoy`, only crate with `unsafe`)
-- [ ] Hotplug watch → open → bounded read loop with timeout
-- [ ] Disconnect → vJoy neutral (no stuck keys)
-- [ ] LED writes on change only
-- [ ] Config from `config/default.toml`
+- [x] vJoy FFI adapter (`sbc-vjoy`, only crate with `unsafe`) — Windows build unverified
+- [x] Reconnect loop → open → bounded read loop with timeout
+- [x] Disconnect → vJoy neutral (no stuck keys)
+- [x] LED writes on change only; hold Start 2 s = all LEDs off
+- [x] Config from `sbc-bridge.toml` next to exe, else `config/default.toml`
 
 ## P4 — Plug and play
 - [ ] Start at logon (Task Scheduler), hidden, single instance

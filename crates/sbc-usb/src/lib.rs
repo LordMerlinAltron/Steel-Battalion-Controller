@@ -3,6 +3,8 @@
 //! Windows: the controller must be bound to `WinUSB` (Zadig) once.
 //! Buffers are allocated at open and reused; the read path does not allocate.
 
+#![forbid(unsafe_code)]
+
 use std::fmt;
 use std::time::Duration;
 
