@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 env:
-  CARGO_TERM_COLOR: always
+  CARGO_TERM_COLOR: never
   RUSTFLAGS: -D warnings
 
 jobs:
@@ -19,16 +19,30 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
+      - name: toolchain
+        run: rustc -vV && cargo clippy -V
       - name: fmt
         run: cargo fmt --all -- --check
       - name: clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: |
+          set +e
+          cargo clippy --workspace --all-targets --message-format=short -- -D warnings > clippy.txt 2>&1
+          rc=$?
+          cat clippy.txt
+          # Surface diagnostics as annotations (readable via the checks API).
+          grep -E '^[^ ]+:[0-9]+:[0-9]+: (error|warning)' clippy.txt | head -40 | \
+            sed -E 's/^([^:]+):([0-9]+):([0-9]+): (error|warning)(\[[^]]*\])?: (.*)$/::error file=\1,line=\2,col=\3::\4\5: \6/'
+          grep -E '^error(\[[^]]*\])?: ' clippy.txt | head -10 | sed -E 's/^/::error::/'
+          exit $rc
       - name: test
         run: cargo test --workspace
       - name: build release
@@ -37,5 +51,5 @@ jobs:
   deny:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: EmbarkStudios/cargo-deny-action@v2
