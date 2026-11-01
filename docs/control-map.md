@@ -10,11 +10,11 @@ LED id = vJoy button number for buttons 4–33 (see [protocol.md](protocol.md)).
 
 | vJoy axis | Raw field | Physical | Status (raw, 2026-11-01 capture) |
 |---|---|---|---|
-| X | AimX | Right block — aim stick left/right | ✅ rest 25.8k, 1.6k–63.2k |
-| Y | AimY | Right block — aim stick fwd/back | 🟡 rest 29.0k, ≤26.1k–60.2k (fwd end not reached) |
-| Z | Rotation | Left block — rotation lever | ✅ rest ~0, −32.0k–29.7k |
-| Rx | SightX | Left block — sight change stick X | ✅ rest ~0, −15.4k–24.6k |
-| Ry | SightY | Left block — sight change stick Y | ✅ rest ~0, −24.8k–19.8k |
+| X | AimX | Right block — aim stick left/right (friction-held, **no spring**) | ✅ 1.0k–64.4k, linear (middle of travel = center) |
+| Y | AimY | Right block — aim stick fwd/back (friction-held, **no spring**) | ✅ 1.0k–64.4k, linear (middle of travel = center) |
+| Z | Rotation | Left block — rotation lever (springs back) | ✅ rest ~0, −31.8k–31.4k |
+| Rx | SightX | Left block — sight change stick X (springs back) | ✅ rest ~0, −28.4k–28.8k |
+| Ry | SightY | Left block — sight change stick Y (springs back) | ✅ rest ~0, −27.6k–28.5k |
 | Rz | Throttle | Right pedal | ✅ rest 0, –60.5k |
 | Slider 0 | Clutch | Left pedal | ✅ rest 0.7k, –63.9k |
 | Slider 1 | Brake | Middle pedal | ✅ rest 4.3k, –63.2k |
@@ -76,7 +76,7 @@ LED id = vJoy button number for buttons 4–33 (see [protocol.md](protocol.md)).
 
 vJoy device config: 8 axes, 80 buttons, 0 POV.
 
-Axes are scaled with `sbc-calibration.toml` (rest → vJoy center for sticks/levers, released → minimum for pedals). Make one with `setup\4b-calibrate.cmd`.
+Axes are scaled with `sbc-calibration.toml`: spring-centered controls map rest → vJoy center; the aim stick (no spring) and pedals map min → max linearly. Make one with `setup\4b-calibrate.cmd`.
 
 ## LED behavior
 

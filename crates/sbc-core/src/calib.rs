@@ -1,8 +1,9 @@
 //! Axis calibration: raw axis value → vJoy range, per axis.
 //!
-//! Sticks and levers use three points (min, center, max) so the rest position maps to the
-//! vJoy center even when it is not in the middle of the raw range (aim stick: rest ≈ 40 %).
-//! Pedals use two points (min = released, max = floored).
+//! Spring-centered controls (rotation lever, sight stick) use three points (min, center, max)
+//! so the rest position maps to the vJoy center even when it is off the raw midpoint.
+//! Controls that stay where they are put (aim stick: friction-held, no spring) and pedals
+//! use two points (min, max).
 
 use crate::input::SbcState;
 use crate::pad::{AXIS_COUNT, AXIS_MAX, AXIS_MIN};
@@ -20,6 +21,11 @@ pub const RAW_HIGH: i32 = 65_535;
 pub const AXIS_NAMES: [&str; AXIS_COUNT] = [
     "aim_x", "aim_y", "rotation", "sight_x", "sight_y", "throttle", "clutch", "brake",
 ];
+
+/// Per axis (vJoy order): true = springs back to a rest position (three-point calibration).
+/// The aim stick stays wherever it is pushed, so its "rest" says nothing about its center.
+pub const SPRING_CENTERED: [bool; AXIS_COUNT] =
+    [false, false, true, true, true, false, false, false];
 
 /// Why a calibration is rejected.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -208,11 +214,11 @@ mod tests {
 
     #[test]
     fn centered_rest_maps_to_mid() {
-        let a = AxisCal::centered(1600, 25_856, 63_168); // aim X, from hardware
-        assert_eq!(a.map(25_856), AXIS_MID);
-        assert_eq!(a.map(1600), AXIS_MIN);
-        assert_eq!(a.map(63_168), AXIS_MAX);
-        assert!(a.map(13_728) < AXIS_MID && a.map(13_728) > AXIS_MIN);
+        let a = AxisCal::centered(-31_750, 48, 31_366); // rotation lever, from hardware
+        assert_eq!(a.map(48), AXIS_MID);
+        assert_eq!(a.map(-31_750), AXIS_MIN);
+        assert_eq!(a.map(31_366), AXIS_MAX);
+        assert!(a.map(-15_000) < AXIS_MID && a.map(-15_000) > AXIS_MIN);
     }
 
     #[test]

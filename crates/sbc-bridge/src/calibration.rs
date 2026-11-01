@@ -108,7 +108,12 @@ mod tests {
         let text = include_str!("../../../config/calibration.toml");
         let cal = parse(text).unwrap();
         assert_ne!(cal, Calibration::full_range());
-        assert_eq!(cal.axes.first().and_then(|a| a.center), Some(25_824));
+        assert_eq!(
+            cal.axes.first().and_then(|a| a.center),
+            None,
+            "aim stick: no spring"
+        );
+        assert_eq!(cal.axes.get(2).and_then(|a| a.center), Some(48));
     }
 
     #[test]

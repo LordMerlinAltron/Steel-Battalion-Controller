@@ -27,18 +27,18 @@ const IDLE: [[u8; 26]; 4] = [
     ],
 ];
 
-/// Calibration measured on the same controller (see `config/calibration.toml`).
+/// Calibration measured on the same controller (pedal minimums from the hands-off capture).
 fn measured() -> Calibration {
     Calibration {
         axes: [
-            AxisCal::centered(1600, 25_824, 63_168),
-            AxisCal::centered(1600, 28_960, 60_224),
-            AxisCal::centered(-32_000, 128, 29_696),
-            AxisCal::centered(-15_424, 128, 24_576),
-            AxisCal::centered(-24_832, 160, 19_776),
-            AxisCal::linear(64, 60_544),
-            AxisCal::linear(704, 63_872),
-            AxisCal::linear(4288, 63_168),
+            AxisCal::linear(1023, 64_449),
+            AxisCal::linear(1023, 64_449),
+            AxisCal::centered(-31_750, 128, 31_366),
+            AxisCal::centered(-28_389, 128, 28_837),
+            AxisCal::centered(-27_575, 160, 28_535),
+            AxisCal::linear(64, 64_449),
+            AxisCal::linear(704, 64_463),
+            AxisCal::linear(4288, 64_506),
         ],
     }
 }
@@ -60,16 +60,17 @@ fn idle_packets_decode_to_rest_state() {
 }
 
 #[test]
-fn idle_maps_to_centered_sticks_and_released_pedals() {
+fn idle_maps_to_centered_levers_and_released_pedals() {
     let cal = measured();
     assert!(cal.validate().is_ok());
     let tol = 0x0100; // < 1 % of full range
     for p in &IDLE {
         let axes = cal.map(&decode(p).unwrap());
-        for (i, a) in axes.iter().take(5).enumerate() {
+        // Rotation lever and sight stick spring back; the aim stick (axes 0, 1) stays put.
+        for (i, a) in axes.iter().enumerate().take(5).skip(2) {
             assert!(
                 a.abs_diff(AXIS_MID) <= tol,
-                "stick axis {i} at rest: {a:#06x}"
+                "lever axis {i} at rest: {a:#06x}"
             );
         }
         for (i, a) in axes.iter().skip(5).enumerate() {

@@ -12,8 +12,8 @@ if errorlevel 1 goto fail
 
 echo.
 echo [2/3] Calibrate. After you press a key:
-echo   - first 3 s: HANDS OFF (rest position)
-echo   - then 40 s: aim stick and sight stick slowly around all edges,
+echo   - first 3 s: HANDS AND FEET OFF (rest position). The aim stick can stay wherever it is.
+echo   - then 40 s: aim stick and sight stick slowly around all edges (aim stick: all 4 corners),
 echo                rotation lever fully both ways, each pedal to the floor once.
 pause
 "target\release\sbc-capture.exe" calibrate --secs 40 --out config\calibration.toml

@@ -1,43 +1,42 @@
 # Axis calibration (raw values). Copied next to sbc-bridge.exe as sbc-calibration.toml.
 # Regenerate for your controller: setup\4b-calibrate.cmd (writes config\calibration.toml).
-# Sticks/levers: min, center (rest), max. Pedals: min (released), max (floored).
+# Spring-centered (rotation, sight): min, center (rest), max.
+# No center (aim stick stays where pushed; pedals): min, max. Middle of travel = vJoy center.
 #
-# Values below: measured 2026-11-01 on the project's own controller (logs\p1-watch.txt).
-# aim_y.min was not reached in that capture (stick not pushed fully forward); 1600 is assumed.
+# Values: measured 2026-11-01 on the project's own controller (4b run with full travel);
+# throttle min taken from the hands-off capture (the 4b run had a foot on that pedal).
 
 [aim_x]
-min = 1600
-center = 25824
-max = 63168
+min = 1023
+max = 64449
 
 [aim_y]
-min = 1600
-center = 28960
-max = 60224
+min = 1023
+max = 64449
 
 [rotation]
-min = -32000
-center = 128
-max = 29696
+min = -31750
+center = 48
+max = 31366
 
 [sight_x]
-min = -15424
-center = 128
-max = 24576
+min = -28389
+center = 29
+max = 28837
 
 [sight_y]
-min = -24832
-center = 160
-max = 19776
+min = -27575
+center = 645
+max = 28535
 
 [throttle]
-min = 64
-max = 60544
+min = 1007
+max = 64449
 
 [clutch]
-min = 704
-max = 63872
+min = 1152
+max = 64463
 
 [brake]
-min = 4288
-max = 63168
+min = 4032
+max = 64506

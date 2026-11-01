@@ -15,7 +15,8 @@ Approach: user-mode bridge. **No custom kernel driver, no driver signing, Secure
 ## P1 — Evidence capture (`sbc-capture`) — run `scripts/p1-capture.ps1`
 - [x] `info`: confirm endpoints IN `0x82` / OUT `0x01` and XID sizes 26 / 22 → `docs/protocol.md`
 - [x] `watch`: press every control, confirm name/bit → `docs/control-map.md` (🟡 → ✅)
-- [ ] Re-check: `LeftJoySightChange` (vJoy 34) press; aim stick pushed fully forward (`4b-calibrate`)
+- [ ] Re-check: `LeftJoySightChange` (vJoy 34) press
+- [x] Aim stick full travel captured; it is friction-held (no spring) → linear calibration
 - [x] Record gear raw values; confirm trigger mask (`0x02`)
 - [x] `raw --save`: save packet fixtures for tests (`fixtures/*.bin`)
 - [x] `led-probe`: confirm 22-byte report (header `00 16`), LED ids 4–33 + gears 35–41
