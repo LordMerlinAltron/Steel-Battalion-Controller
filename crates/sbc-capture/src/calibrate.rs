@@ -147,7 +147,7 @@ fn render(tracks: &[Track; AXIS_COUNT]) -> String {
             }
         }
     }
-    debug_assert!(!out.is_empty());
+    debug_assert!(out.starts_with("# Axis calibration"), "header first");
     out
 }
 
