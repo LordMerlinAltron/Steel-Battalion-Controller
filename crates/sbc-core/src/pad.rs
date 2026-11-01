@@ -1,6 +1,7 @@
 //! [`SbcState`] → [`PadState`] for the virtual joystick (vJoy).
 //! Button layout: `docs/control-map.md`.
 
+use crate::calib::Calibration;
 use crate::input::{BUTTON_MASK, SbcState, gear_index};
 
 /// vJoy axis minimum.
@@ -53,6 +54,7 @@ impl PadState {
 #[derive(Clone, Copy, Debug)]
 pub struct PadMapper {
     pulse_ms: u64,
+    cal: Calibration,
     primed: bool,
     prev_buttons: u64,
     prev_tuner: u8,
@@ -61,10 +63,18 @@ pub struct PadMapper {
 
 impl PadMapper {
     /// `pulse_ms`: how long synthesized pulse buttons stay pressed. Clamped to 10..=1000.
+    /// `cal`: axis calibration; an invalid one falls back to [`Calibration::full_range`].
     #[must_use]
-    pub fn new(pulse_ms: u64) -> Self {
+    pub fn new(pulse_ms: u64, cal: Calibration) -> Self {
+        let cal = if cal.validate().is_ok() {
+            cal
+        } else {
+            Calibration::full_range()
+        };
+        debug_assert!(cal.validate().is_ok());
         Self {
             pulse_ms: pulse_ms.clamp(10, 1000),
+            cal,
             primed: false,
             prev_buttons: 0,
             prev_tuner: 0,
@@ -74,7 +84,7 @@ impl PadMapper {
 
     /// Forget edges (call on reconnect).
     pub fn reset(&mut self) {
-        *self = Self::new(self.pulse_ms);
+        *self = Self::new(self.pulse_ms, self.cal);
         debug_assert!(!self.primed);
     }
 
@@ -92,7 +102,7 @@ impl PadMapper {
         let buttons =
             u128::from(raw) | gear_bits(s.gear) | tuner_bits(s.tuner) | self.pulse_bits(now_ms);
         let pad = PadState {
-            axes: map_axes(s),
+            axes: self.cal.map(s),
             buttons,
         };
         debug_assert!(
@@ -153,29 +163,6 @@ const fn bit(n: u32) -> u128 {
     }
 }
 
-/// Unsigned 16-bit → vJoy range.
-const fn scale_u(v: u16) -> u16 {
-    (v >> 1).saturating_add(1)
-}
-
-/// Signed 16-bit → vJoy range (center ≈ 0x4000).
-const fn scale_s(v: i16) -> u16 {
-    scale_u(v.cast_unsigned() ^ 0x8000)
-}
-
-fn map_axes(s: &SbcState) -> [u16; AXIS_COUNT] {
-    [
-        scale_u(s.aim_x),
-        scale_u(s.aim_y),
-        scale_s(s.rotation),
-        scale_s(s.sight_x),
-        scale_s(s.sight_y),
-        scale_u(s.throttle),
-        scale_u(s.clutch),
-        scale_u(s.brake),
-    ]
-}
-
 /// Gear raw value → one-hot button.
 const fn gear_bits(gear: i8) -> u128 {
     match gear_index(gear) {
@@ -205,19 +192,30 @@ mod tests {
         }
     }
 
+    fn mapper() -> PadMapper {
+        PadMapper::new(50, Calibration::full_range())
+    }
+
     #[test]
-    fn axis_scaling_covers_range() {
-        assert_eq!(scale_u(0), AXIS_MIN);
-        assert_eq!(scale_u(u16::MAX), AXIS_MAX);
-        assert_eq!(scale_s(i16::MIN), AXIS_MIN);
-        assert_eq!(scale_s(i16::MAX), AXIS_MAX);
-        assert_eq!(scale_s(0), 0x4001);
-        assert_eq!(scale_s(-1), 0x4000); // no double-wide center bin
+    fn invalid_calibration_falls_back_to_full_range() {
+        let mut bad = Calibration::full_range();
+        if let Some(a) = bad.axes.first_mut() {
+            a.max = a.min;
+        }
+        let mut m = PadMapper::new(50, bad);
+        let p = m.map(
+            &SbcState {
+                aim_x: u16::MAX,
+                ..state()
+            },
+            0,
+        );
+        assert_eq!(p.axes.first().copied(), Some(AXIS_MAX));
     }
 
     #[test]
     fn gear_and_tuner_one_hot() {
-        let mut m = PadMapper::new(50);
+        let mut m = mapper();
         let s = SbcState {
             gear: 3,
             tuner: 5,
@@ -235,7 +233,7 @@ mod tests {
 
     #[test]
     fn no_pulses_on_first_report() {
-        let mut m = PadMapper::new(50);
+        let mut m = mapper();
         let p = m.map(
             &SbcState {
                 buttons: FILTER,
@@ -248,7 +246,7 @@ mod tests {
 
     #[test]
     fn toggle_on_and_off_pulse_then_expire() {
-        let mut m = PadMapper::new(50);
+        let mut m = mapper();
         let _ = m.map(&state(), 0);
         let on = bit(PULSE_BASE_BIT + 2);
         let off = bit(PULSE_BASE_BIT + 7);
@@ -276,7 +274,7 @@ mod tests {
 
     #[test]
     fn tuner_steps_with_wrap() {
-        let mut m = PadMapper::new(50);
+        let mut m = mapper();
         let up = bit(PULSE_BASE_BIT);
         let down = bit(PULSE_BASE_BIT + 1);
         let _ = m.map(

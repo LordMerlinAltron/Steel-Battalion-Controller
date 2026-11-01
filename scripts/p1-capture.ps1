@@ -4,7 +4,7 @@
 # Output: logs\p1-*.txt, fixtures\local\idle\*.bin
 
 param(
-    [ValidateRange(30, 1800)] [int]$WatchSecs = 300,
+    [ValidateRange(30, 1800)] [int]$WatchSecs = 180,
     [ValidateRange(300, 5000)] [int]$DwellMs = 1000
 )
 
@@ -38,7 +38,7 @@ Invoke-Logged 'led-probe' { & $exe led-probe --dwell $DwellMs }
 $ledNotes = Read-Host 'LED mismatches (e.g. "id 14 lit Washing") or Enter if all correct'
 Set-Content -Encoding UTF8 -Path (Join-Path $logDir 'p1-led-notes.txt') -Value $ledNotes
 
-Write-Host "[5/5] watch ($WatchSecs s). Do in order:" -ForegroundColor Yellow
+Write-Host "[5/5] watch: records for $WatchSecs s, then continues by itself. Do in order:" -ForegroundColor Yellow
 Write-Host '  1. every button once, left to right, top to bottom'
 Write-Host '  2. each toggle switch on then off'
 Write-Host '  3. gear lever R, N, 1, 2, 3, 4, 5'

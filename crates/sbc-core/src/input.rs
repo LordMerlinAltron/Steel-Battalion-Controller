@@ -6,6 +6,8 @@ pub const INPUT_REPORT_LEN: usize = 26;
 pub const BUTTON_COUNT: u32 = 39;
 /// Mask of valid physical button bits.
 pub const BUTTON_MASK: u64 = (1u64 << BUTTON_COUNT) - 1;
+/// Raw bits of the 5 toggle switches (physical buttons 35–39).
+pub const TOGGLE_MASK: u64 = 0b1_1111 << 34;
 
 /// Decoded controller state. All values raw (unscaled).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -35,7 +37,7 @@ pub struct SbcState {
 }
 
 /// Gear raw value → position index: R=0, N=1, 1st..5th = 2..6. `None` if unknown.
-/// Raw values (R=-2, N=-1, 1..5) inferred from the 2019 driver; verify in Phase 1.
+/// Raw values R=-2, N=-1, 1..5 confirmed on hardware; 0 appears for ~10 ms between gears.
 #[must_use]
 pub const fn gear_index(gear: i8) -> Option<u32> {
     match gear {

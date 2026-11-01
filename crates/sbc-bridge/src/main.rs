@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
+mod calibration;
 mod config;
 mod leds;
 mod runtime;
@@ -73,9 +74,22 @@ fn load_config(args: &Args, dir: &std::path::Path, log: &Logger) -> Result<Confi
     candidates.extend(args.config.clone());
     candidates.push(dir.join("sbc-bridge.toml"));
     candidates.push(PathBuf::from("config").join("default.toml"));
-    let (cfg, source) = config::load(&candidates)?;
+    let (mut cfg, source) = config::load(&candidates)?;
     log.line(&format!("config: {source}"));
     debug_assert!(candidates.len() <= 3);
+    let cal_paths = [
+        dir.join("sbc-calibration.toml"),
+        PathBuf::from("config").join("calibration.toml"),
+    ];
+    for path in &cal_paths {
+        if let Some(cal) = calibration::load(path)? {
+            log.line(&format!("calibration: {}", path.display()));
+            cfg.calibration = cal;
+            return Ok(cfg);
+        }
+    }
+    log.line("calibration: none (full raw range)");
+    debug_assert_eq!(cfg.calibration, sbc_core::Calibration::full_range());
     Ok(cfg)
 }
 

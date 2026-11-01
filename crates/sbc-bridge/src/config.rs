@@ -2,8 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
+use sbc_core::filter::FILTER_MAX_MS;
 use sbc_core::ledout::{LED_BUTTON_MASK, LED_MAX_LEVEL};
-use sbc_core::{GearLedStyle, LedLevels, LedModes};
+use sbc_core::{Calibration, FilterTimes, GearLedStyle, LedLevels, LedModes};
 use serde::Deserialize;
 
 const MAX_CONFIG_BYTES: u64 = 64 * 1024;
@@ -75,6 +76,26 @@ impl Default for UsbSection {
     }
 }
 
+/// `[input]`
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
+#[serde(default, deny_unknown_fields)]
+pub struct InputSection {
+    /// Toggle-switch debounce (ms); 0 = off.
+    pub toggle_debounce_ms: u64,
+    /// Tuner dial settle time (ms); 0 = off.
+    pub tuner_settle_ms: u64,
+}
+
+impl Default for InputSection {
+    fn default() -> Self {
+        let t = FilterTimes::default();
+        Self {
+            toggle_debounce_ms: t.toggle_ms,
+            tuner_settle_ms: t.tuner_ms,
+        }
+    }
+}
+
 /// `[leds]`
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
 #[serde(default, deny_unknown_fields)]
@@ -117,8 +138,13 @@ pub struct Config {
     pub vjoy: VjoySection,
     /// `[usb]`
     pub usb: UsbSection,
+    /// `[input]`
+    pub input: InputSection,
     /// `[leds]`
     pub leds: LedSection,
+    /// Axis calibration; comes from `sbc-calibration.toml`, not from this file.
+    #[serde(skip)]
+    pub calibration: Calibration,
 }
 
 impl Config {
@@ -130,7 +156,7 @@ impl Config {
     }
 
     fn validate(&self) -> Result<(), String> {
-        let checks: [(bool, &str); 6] = [
+        let checks: [(bool, &str); 7] = [
             (
                 (1..=16).contains(&self.vjoy.device_id),
                 "vjoy.device_id must be 1..=16",
@@ -154,6 +180,11 @@ impl Config {
             (
                 self.leds.clear_combo_ms <= 10_000,
                 "leds.clear_combo_ms must be 0..=10000",
+            ),
+            (
+                self.input.toggle_debounce_ms <= FILTER_MAX_MS
+                    && self.input.tuner_settle_ms <= FILTER_MAX_MS,
+                "input times must be 0..=1000",
             ),
         ];
         let failed: Vec<&str> = checks
@@ -188,6 +219,15 @@ impl Config {
             PanelLedMode::Off => (0, 0),
         };
         LedModes::new(toggle, mirror).unwrap_or_default()
+    }
+
+    /// Input filter times.
+    #[must_use]
+    pub const fn filter_times(&self) -> FilterTimes {
+        FilterTimes {
+            toggle_ms: self.input.toggle_debounce_ms,
+            tuner_ms: self.input.tuner_settle_ms,
+        }
     }
 
     /// LED brightness levels.
@@ -244,6 +284,7 @@ mod tests {
         let cfg = Config::parse(text).unwrap();
         assert_eq!(cfg.vjoy.device_id, 1);
         assert_eq!(cfg.leds.panel_buttons, PanelLedMode::Toggle);
+        assert_eq!(cfg.filter_times(), FilterTimes::default());
     }
 
     #[test]
@@ -257,6 +298,7 @@ mod tests {
         assert!(Config::parse("[leds]\non_level = 16").is_err());
         assert!(Config::parse("[leds]\npanel_buttons = \"blink\"").is_err());
         assert!(Config::parse("[usb]\ntypo = 1").is_err());
+        assert!(Config::parse("[input]\ntoggle_debounce_ms = 5000").is_err());
     }
 
     #[test]

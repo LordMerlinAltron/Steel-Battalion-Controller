@@ -1,0 +1,43 @@
+# Axis calibration (raw values). Copied next to sbc-bridge.exe as sbc-calibration.toml.
+# Regenerate for your controller: setup\4b-calibrate.cmd (writes config\calibration.toml).
+# Sticks/levers: min, center (rest), max. Pedals: min (released), max (floored).
+#
+# Values below: measured 2026-11-01 on the project's own controller (logs\p1-watch.txt).
+# aim_y.min was not reached in that capture (stick not pushed fully forward); 1600 is assumed.
+
+[aim_x]
+min = 1600
+center = 25824
+max = 63168
+
+[aim_y]
+min = 1600
+center = 28960
+max = 60224
+
+[rotation]
+min = -32000
+center = 128
+max = 29696
+
+[sight_x]
+min = -15424
+center = 128
+max = 24576
+
+[sight_y]
+min = -24832
+center = 160
+max = 19776
+
+[throttle]
+min = 64
+max = 60544
+
+[clutch]
+min = 704
+max = 63872
+
+[brake]
+min = 4288
+max = 63168

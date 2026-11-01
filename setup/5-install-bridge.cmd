@@ -20,6 +20,7 @@ if not exist bin mkdir bin
 call :run copy /y "target\release\sbc-bridge.exe" "bin\sbc-bridge.exe"
 if errorlevel 1 goto fail
 if not exist "bin\sbc-bridge.toml" call :run copy /y "config\default.toml" "bin\sbc-bridge.toml"
+if exist "config\calibration.toml" call :run copy /y "config\calibration.toml" "bin\sbc-calibration.toml"
 call :run powershell -NoProfile -Command "$s=(New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Startup')+'\Steel Battalion Bridge.lnk'); $s.TargetPath='%ROOT%\bin\sbc-bridge.exe'; $s.Arguments='--log \"%ROOT%\logs\bridge.log\"'; $s.WorkingDirectory='%ROOT%\bin'; $s.Description='Steel Battalion controller to vJoy'; $s.Save()"
 if errorlevel 1 goto fail
 

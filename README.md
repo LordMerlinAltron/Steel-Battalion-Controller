@@ -18,6 +18,7 @@ SBC ──WinUSB──► sbc-bridge ──► vJoy ──► JoyToKey ──►
 
 ## Requirements
 - Windows 10/11 x64
+- Rust (MSVC toolchain) + Visual Studio C++ Build Tools — `setup\2-install-rust.cmd` installs both
 - [vJoy](https://github.com/jshafer817/vJoy) (signed build)
 - [Zadig](https://zadig.akeo.ie/) — one-time WinUSB binding for the controller
 - [JoyToKey](https://joytokey.net/) 6.2+ (128-button support)
@@ -35,6 +36,7 @@ cargo run -p sbc-capture -- info        # USB descriptors + endpoints
 cargo run -p sbc-capture -- watch       # live named controls
 cargo run -p sbc-capture -- raw         # raw 26-byte packets as hex
 cargo run -p sbc-capture -- led-probe   # light each LED id, print expected control
+cargo run -p sbc-capture -- calibrate --secs 40 --out config/calibration.toml
 ```
 
 ## Credits

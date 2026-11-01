@@ -13,6 +13,7 @@ pub enum Command {
     Watch,
     Raw,
     LedProbe,
+    Calibrate,
 }
 
 /// Parsed options with defaults applied.
@@ -24,6 +25,7 @@ pub struct Opts {
     pub max_packets: usize,
     pub led_len: Option<usize>,
     pub dwell: Duration,
+    pub out_path: Option<PathBuf>,
 }
 
 impl Opts {
@@ -36,6 +38,7 @@ impl Opts {
             Some("watch") => Command::Watch,
             Some("raw") => Command::Raw,
             Some("led-probe") => Command::LedProbe,
+            Some("calibrate") => Command::Calibrate,
             Some(other) => return Err(format!("unknown command '{other}'")),
         };
         let mut o = Self {
@@ -45,6 +48,7 @@ impl Opts {
             max_packets: 500,
             led_len: None,
             dwell: Duration::from_millis(1500),
+            out_path: None,
         };
         while let Some(flag) = it.next() {
             let val = it.next().ok_or_else(|| format!("{flag} needs a value"))?;
@@ -61,6 +65,7 @@ impl Opts {
             "--max" => self.max_packets = usize_num(flag, val, 1, 100_000)?,
             "--len" => self.led_len = Some(usize_num(flag, val, 1, sbc_core::LED_REPORT_LEN)?),
             "--dwell" => self.dwell = Duration::from_millis(num(flag, val, 100, 10_000)?),
+            "--out" => self.out_path = Some(PathBuf::from(val)),
             _ => return Err(format!("unknown option '{flag}'")),
         }
         Ok(())
@@ -109,6 +114,14 @@ mod tests {
         let o = parse("led-probe --len 22 --dwell 500").unwrap();
         assert_eq!(o.led_len, Some(22));
         assert_eq!(o.dwell, Duration::from_millis(500));
+    }
+
+    #[test]
+    fn calibrate_options() {
+        let o = parse("calibrate --secs 45 --out config/calibration.toml").unwrap();
+        assert_eq!(o.command, Command::Calibrate);
+        assert_eq!(o.run_time, Duration::from_secs(45));
+        assert_eq!(o.out_path, Some(PathBuf::from("config/calibration.toml")));
     }
 
     #[test]

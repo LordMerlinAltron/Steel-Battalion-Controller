@@ -107,3 +107,22 @@ Open question: SB.NET masks the aim-stick trigger as `0x03` on byte 2; WIKI and 
 - Earlier revisions of this crate sent SB.NET's 34-byte buffer with no header. That exceeded the 32-byte OUT packet and omitted the length byte. Fixed after cross-checking WIKI.
 
 Verify with `sbc-capture led-probe` (walks ids 4–41 and prints the expected control).
+
+## Hardware verification (2026-11-01, `setup\4-capture.cmd`) ✅
+
+One controller, Windows 11, WinUSB. Logs: `logs\p1-*.txt` (not in git); tests: `crates/sbc-core/tests/hardware_capture.rs`.
+
+| Fact | Result |
+|---|---|
+| Interface / endpoints | class 58/42/00; IN `0x82` and OUT `0x01`, interrupt, 32 bytes, interval 4 ms ✅ |
+| XID descriptor | `10 42 00 01 80 01 1A 16 …`: type 80/01, in 26, out 22 ✅ |
+| Input report | 26 bytes every ~4 ms; header `00 1A` ✅ |
+| Byte 6 bit 7 | set at rest (not a button); decoder drops it ✅ |
+| Axes | 16-bit LE, low 6 bits always 0 (10-bit sensors), ±1–2 LSB jitter at rest |
+| Gear | R −2, N −1, 1–5; raw 0 for ~10 ms between gears ✅ |
+| Tuner | 0–15, +1 per click clockwise, wraps 15 → 0; one transient wrong code (60 ms) seen mid-turn |
+| Trigger (RightJoyFire) | bit 0x02 alone; SB.NET's 0x03 mask not needed ✅ |
+| Toggle switches | bounce 10–70 ms per flip (e.g. + 48719, − 48731, + 48791 ms) |
+| Buttons 1–33 | clean edges, no bounce seen ✅ |
+| LED report | 22 bytes, header `00 16`, ids 4–41 lit the expected lamps ✅ |
+

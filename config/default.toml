@@ -1,4 +1,5 @@
 # sbc-bridge configuration. Copy next to sbc-bridge.exe as sbc-bridge.toml to customize.
+# Axis calibration lives in sbc-calibration.toml (made by setup\4b-calibrate.cmd).
 
 [vjoy]
 device_id = 1          # vJoy device slot (1..=16); configure it with 8 axes + 80 buttons
@@ -8,6 +9,10 @@ dll_path  = ""         # empty = C:\Program Files\vJoy\x64\vJoyInterface.dll
 [usb]
 read_timeout_ms = 100
 reconnect_ms    = 1000
+
+[input]
+toggle_debounce_ms = 80   # toggle switches bounce 10-70 ms; ignore re-flips this long (0 = off)
+tuner_settle_ms    = 100  # tuner position must hold this long to count (filters glitches; 0 = off)
 
 [leds]
 enabled          = true

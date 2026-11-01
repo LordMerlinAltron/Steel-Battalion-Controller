@@ -2,7 +2,7 @@
 
 use std::time::{Duration, Instant};
 
-use sbc_core::{PadMapper, SbcState, decode};
+use sbc_core::{InputFilter, PadMapper, SbcState, decode};
 use sbc_usb::{MAX_REPORT, SbcDevice, UsbError};
 use sbc_vjoy::{Vjoy, VjoyError};
 
@@ -33,6 +33,7 @@ pub struct Session<'a> {
     vjoy: &'a Vjoy,
     log: &'a Logger,
     timeout: Duration,
+    filter: InputFilter,
     mapper: PadMapper,
     leds: Option<LedDriver>,
     last: Option<SbcState>,
@@ -57,7 +58,8 @@ impl<'a> Session<'a> {
             vjoy,
             log,
             timeout: Duration::from_millis(cfg.usb.read_timeout_ms),
-            mapper: PadMapper::new(cfg.vjoy.pulse_ms),
+            filter: InputFilter::new(cfg.filter_times()),
+            mapper: PadMapper::new(cfg.vjoy.pulse_ms, cfg.calibration),
             leds,
             last: None,
             bad: 0,
@@ -100,12 +102,14 @@ impl<'a> Session<'a> {
         self.apply(&s)
     }
 
-    fn apply(&mut self, s: &SbcState) -> Result<(), SessionEnd> {
+    /// `raw` is unfiltered; it is kept so read timeouts can re-feed it and let filters settle.
+    fn apply(&mut self, raw: &SbcState) -> Result<(), SessionEnd> {
         let now = self.now_ms();
-        let pad = self.mapper.map(s, now);
+        let s = self.filter.apply(raw, now);
+        let pad = self.mapper.map(&s, now);
         self.vjoy.update(&pad).map_err(SessionEnd::Vjoy)?;
-        self.last = Some(*s);
-        let report = self.leds.as_mut().and_then(|d| d.next(s, now));
+        self.last = Some(*raw);
+        let report = self.leds.as_mut().and_then(|d| d.next(&s, now));
         if let Some(r) = report {
             self.write_leds(&r);
         }

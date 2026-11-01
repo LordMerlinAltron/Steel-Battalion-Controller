@@ -5,20 +5,21 @@ Goal: plug in the Steel Battalion controller → Windows sees a joystick → Joy
 Approach: user-mode bridge. **No custom kernel driver, no driver signing, Secure Boot stays on.**
 
 ## P0 — Prereqs and risk check
-- [ ] Remove 2019 test-signed driver if installed; turn test-signing off
-- [ ] Install signed vJoy; confirm `vJoy Device` status OK with Secure Boot ON  ← **blocker if this fails**
-- [ ] Bind SBC to WinUSB with Zadig
-- [ ] Rust toolchain + MSVC build tools
+- [x] Remove 2019 test-signed driver if installed; turn test-signing off
+- [x] Install signed vJoy; confirm `vJoy Device` status OK with Secure Boot ON  ← **blocker if this fails**
+- [x] Bind SBC to WinUSB with Zadig
+- [x] Rust MSVC toolchain + C++ Build Tools (VS 2022 BuildTools)
 - [x] Repo scaffold (this branch)
-- [ ] Run `scripts/p0-check.ps1` (admin) → `logs/p0-check.txt`
+- [x] Run `scripts/p0-check.ps1` (admin) → `logs/p0-check.txt`
 
 ## P1 — Evidence capture (`sbc-capture`) — run `scripts/p1-capture.ps1`
-- [ ] `info`: confirm endpoints IN `0x82` / OUT `0x01` and XID sizes 26 / 22 → `docs/protocol.md`
-- [ ] `watch`: press every control, confirm name/bit → `docs/control-map.md` (🟡 → ✅)
-- [ ] Record gear raw values; confirm trigger mask (`0x02` vs `0x03`)
-- [ ] `raw --save`: save packet fixtures for tests (`fixtures/*.bin`)
-- [ ] `led-probe`: confirm 22-byte report (header `00 16`), LED ids 4–33 + gears 35–41
-- [ ] Check for switch bounce (decides debounce)
+- [x] `info`: confirm endpoints IN `0x82` / OUT `0x01` and XID sizes 26 / 22 → `docs/protocol.md`
+- [x] `watch`: press every control, confirm name/bit → `docs/control-map.md` (🟡 → ✅)
+- [ ] Re-check: `LeftJoySightChange` (vJoy 34) press; aim stick pushed fully forward (`4b-calibrate`)
+- [x] Record gear raw values; confirm trigger mask (`0x02`)
+- [x] `raw --save`: save packet fixtures for tests (`fixtures/*.bin`)
+- [x] `led-probe`: confirm 22-byte report (header `00 16`), LED ids 4–33 + gears 35–41
+- [x] Check for switch bounce → toggles bounce 10–70 ms, tuner glitch 60 ms
 
 ## P2 — Core logic (`sbc-core`, pure)
 - [x] Input decode (26 bytes)
@@ -26,7 +27,9 @@ Approach: user-mode bridge. **No custom kernel driver, no driver signing, Secure
 - [x] Pad mapping (axes, gear/tuner buttons, toggle pulses)
 - [x] LED encode (22-byte report with header, gear position/progressive, hold gear through neutral gap)
 - [x] XID descriptor parse; bridge checks output size at connect
-- [ ] Tests from real fixtures
+- [x] Tests from real fixtures (`sbc-core/tests/hardware_capture.rs`)
+- [x] Input filter: toggle debounce 80 ms, tuner settle 100 ms (`[input]` in config)
+- [x] Axis calibration (min/center/max) + `sbc-capture calibrate` → `sbc-calibration.toml`
 
 ## P3 — Bridge (`sbc-bridge`)
 - [x] vJoy FFI adapter (`sbc-vjoy`, only crate with `unsafe`) — Windows build unverified
@@ -44,7 +47,7 @@ Approach: user-mode bridge. **No custom kernel driver, no driver signing, Secure
 - [ ] Optional tray icon
 
 ## P5 — JoyToKey
-- [ ] Configure vJoy device: 8 axes, 80 buttons
+- [x] Configure vJoy device: 8 axes, 80 buttons
 - [ ] First profile → `joytokey/`
 - [ ] Setup guide in README
 
