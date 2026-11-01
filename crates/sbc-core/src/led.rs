@@ -78,6 +78,15 @@ impl LedLatch {
         lit
     }
 
+    /// Clear latched LEDs while treating `pressed` as already held,
+    /// so buttons currently down do not register a new press.
+    pub fn clear_holding(&mut self, pressed: u64) {
+        self.latched = 0;
+        self.prev_pressed = pressed & BUTTON_MASK;
+        debug_assert_eq!(self.latched, 0);
+        debug_assert_eq!(self.prev_pressed & !BUTTON_MASK, 0);
+    }
+
     /// Clear all latched LEDs (connect, or "all off" combo).
     pub fn reset(&mut self) {
         *self = Self::new();
@@ -120,6 +129,16 @@ mod tests {
         let _ = l.update(HATCH, modes());
         l.reset();
         assert_eq!(l.update(0, modes()), 0);
+    }
+
+    #[test]
+    fn clear_holding_ignores_held_button() {
+        let mut l = LedLatch::new();
+        let _ = l.update(HATCH, modes());
+        l.clear_holding(HATCH);
+        assert_eq!(l.update(HATCH, modes()), 0, "still held: no new press");
+        assert_eq!(l.update(0, modes()), 0);
+        assert_eq!(l.update(HATCH, modes()), HATCH, "next real press toggles");
     }
 
     #[test]

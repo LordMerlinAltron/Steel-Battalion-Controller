@@ -3,11 +3,15 @@
 //! Windows: the controller must be bound to `WinUSB` (Zadig) once.
 //! Buffers are allocated at open and reused; the read path does not allocate.
 
+#![forbid(unsafe_code)]
+
 use std::fmt;
 use std::time::Duration;
 
 use nusb::descriptors::TransferType;
-use nusb::transfer::{Buffer, Direction, In, Interrupt, Out, TransferError};
+use nusb::transfer::{
+    Buffer, ControlIn, ControlType, Direction, In, Interrupt, Out, Recipient, TransferError,
+};
 use nusb::{Device, DeviceInfo, Endpoint, Interface, MaybeFuture};
 
 /// USB vendor id.
@@ -20,6 +24,8 @@ pub const INTERFACE: u8 = 0;
 pub const MAX_REPORT: usize = 64;
 /// IN transfers kept in flight.
 const IN_FLIGHT: usize = 2;
+/// Timeout for control requests.
+const CONTROL_TIMEOUT: Duration = Duration::from_millis(500);
 
 /// Adapter errors.
 #[derive(Debug)]
@@ -114,7 +120,7 @@ pub fn endpoint_addrs(device: &Device) -> EndpointAddrs {
 /// Open controller session.
 pub struct SbcDevice {
     device: Device,
-    _interface: Interface,
+    interface: Interface,
     ep_in: Endpoint<Interrupt, In>,
     ep_out: Option<Endpoint<Interrupt, Out>>,
     out_buf: Option<Buffer>,
@@ -162,7 +168,7 @@ impl SbcDevice {
 
         Ok(Self {
             device,
-            _interface: interface,
+            interface,
             ep_in,
             ep_out,
             out_buf,
@@ -174,6 +180,29 @@ impl SbcDevice {
     #[must_use]
     pub const fn addrs(&self) -> EndpointAddrs {
         self.addrs
+    }
+
+    /// Read the raw XID descriptor (vendor request, see `sbc_core::xid`). Not on the hot path.
+    ///
+    /// # Errors
+    /// Transfer failure (device may stall if unsupported).
+    pub fn xid_descriptor(&self) -> Result<Vec<u8>, UsbError> {
+        let req = ControlIn {
+            control_type: ControlType::Vendor,
+            recipient: Recipient::Interface,
+            request: sbc_core::xid::XID_REQUEST,
+            value: sbc_core::xid::XID_VALUE,
+            index: u16::from(INTERFACE),
+            length: u16::try_from(sbc_core::xid::XID_LEN).unwrap_or(16),
+        };
+        let bytes = self
+            .interface
+            .control_in(req, CONTROL_TIMEOUT)
+            .wait()
+            .map_err(UsbError::from)?;
+        debug_assert!(bytes.len() <= sbc_core::xid::XID_LEN);
+        debug_assert_eq!(self.interface.interface_number(), INTERFACE);
+        Ok(bytes)
     }
 
     /// OUT endpoint max packet size, if an OUT endpoint exists.

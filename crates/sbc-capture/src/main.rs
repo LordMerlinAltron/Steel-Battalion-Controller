@@ -1,5 +1,8 @@
 //! `sbc-capture` — Phase 1 evidence tool for the Steel Battalion controller.
 
+#![forbid(unsafe_code)]
+
+mod calibrate;
 mod info;
 mod led_probe;
 mod opts;
@@ -18,13 +21,15 @@ commands:
   watch                     live named controls (press every button)
   raw                       raw input packets as hex
   led-probe                 light each LED id in turn, print expected control
+  calibrate                 3 s hands off, then move every axis; prints calibration TOML
 
 options:
-  --secs N        run time for watch/raw (default 120)
+  --secs N        run time for watch/raw/calibrate (default 120)
   --save DIR      raw: write each packet to DIR/pkt_NNNN.bin
   --max N         raw: stop after N packets (default 500)
   --len N         led-probe: report length (default 34)
-  --dwell MS      led-probe: time per step (default 1500)";
+  --dwell MS      led-probe: time per step (default 1500)
+  --out FILE      calibrate: also write the TOML to FILE";
 
 fn main() -> ExitCode {
     let opts = match Opts::parse(std::env::args().skip(1)) {
@@ -43,6 +48,7 @@ fn main() -> ExitCode {
         Command::Watch => watch::run(&opts).map_err(Into::into),
         Command::Raw => raw::run(&opts),
         Command::LedProbe => led_probe::run(&opts).map_err(Into::into),
+        Command::Calibrate => calibrate::run(&opts),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,

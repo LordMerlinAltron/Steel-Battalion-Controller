@@ -1,0 +1,18 @@
+[package]
+name = "sbc-vjoy"
+description = "vJoy feeder adapter (runtime-loaded vJoyInterface.dll)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+sbc-core.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_LibraryLoader"] }
+
+[lints]
+workspace = true

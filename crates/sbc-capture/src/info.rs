@@ -54,5 +54,28 @@ pub fn run() -> Result<(), UsbError> {
     if configs == 0 {
         println!("warning: no configuration descriptors returned");
     }
+    drop(device);
+    print_xid();
     Ok(())
+}
+
+/// XID descriptor: the device's own statement of its report sizes.
+fn print_xid() {
+    let dev = match sbc_usb::SbcDevice::open() {
+        Ok(d) => d,
+        Err(e) => return println!("XID: cannot open for control request: {e}"),
+    };
+    match dev.xid_descriptor() {
+        Ok(raw) => {
+            println!("XID raw {raw:02X?}");
+            match sbc_core::xid::parse(&raw) {
+                Ok(x) => println!(
+                    "XID bcd {:04X} type {:02X} sub {:02X} max_in {} max_out {} (expect 80 01 26 22)",
+                    x.bcd_xid, x.device_type, x.sub_type, x.max_input, x.max_output
+                ),
+                Err(e) => println!("XID parse error: {e:?}"),
+            }
+        }
+        Err(e) => println!("XID request failed: {e}"),
+    }
 }

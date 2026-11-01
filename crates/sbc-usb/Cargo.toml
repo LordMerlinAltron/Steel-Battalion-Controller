@@ -10,6 +10,7 @@ publish = false
 
 [dependencies]
 nusb.workspace = true
+sbc-core.workspace = true
 
 [lints]
 workspace = true

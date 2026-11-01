@@ -1,21 +1,24 @@
-# sbc-bridge configuration (consumed in Phase 3). Values marked (P1) depend on hardware capture.
+# sbc-bridge configuration. Copy next to sbc-bridge.exe as sbc-bridge.toml to customize.
+# Axis calibration lives in sbc-calibration.toml (made by setup\4b-calibrate.cmd).
 
 [vjoy]
-device_id = 1          # vJoy device slot used for the controller
+device_id = 1          # vJoy device slot (1..=16); configure it with 8 axes + 80 buttons
 pulse_ms  = 60         # length of synthesized pulse buttons (toggle edges, tuner steps)
+dll_path  = ""         # empty = C:\Program Files\vJoy\x64\vJoyInterface.dll
 
 [usb]
 read_timeout_ms = 100
 reconnect_ms    = 1000
 
+[input]
+toggle_debounce_ms = 80   # toggle switches bounce 10-70 ms; ignore re-flips this long (0 = off)
+tuner_settle_ms    = 100  # tuner position must hold this long to count (filters glitches; 0 = off)
+
 [leds]
 enabled          = true
-on_level         = 15     # 0..=15
-off_level        = 0      # >0 = dim backlight on unlit buttons
+on_level         = 15          # 0..=15
+off_level        = 0           # >0 = dim backlight on unlit buttons
 reset_on_connect = true
-persist_state    = false
-clear_combo      = "start_hold_2s"
-
-[leds.mode]
-panel_buttons = "toggle"    # vJoy 4–33: press → on, press again → off; JoyToKey output stays momentary
-gear          = "position"  # position | progressive | off
+panel_buttons    = "toggle"    # toggle | momentary | off   (vJoy buttons 4-33)
+gear             = "position"  # position | progressive | off
+clear_combo_ms   = 2000        # hold Start this long to turn all LEDs off; 0 = disabled

@@ -1,14 +1,22 @@
 //! LED OUT report encoding.
 //!
-//! Report: 34 bytes, no header, sent to the OUT endpoint. LED id `n` lives in byte `n / 2`:
-//! even id → low nibble, odd id → high nibble. Brightness 0..=15.
-//! Button LED ids equal vJoy button numbers 4..=33 (raw bit + 1). Gear LEDs: R=35, N=36, 1st..5th=37..41.
-//! Source: SteelBattalion.NET (protocol facts only); verify with `sbc-capture led-probe`.
+//! Report: 22 bytes on the interrupt OUT endpoint. Byte 0 = `0x00`, byte 1 = length `0x16`.
+//! LED id `n` (4..=41) lives in byte `n / 2`: even id → low nibble, odd id → high nibble.
+//! Brightness 0..=15. Button LED ids equal vJoy button numbers 4..=33 (raw bit + 1).
+//! Gear LEDs: R=35, N=36, 1st..5th=37..41. Byte 21 unused.
+//! Sources: xboxdevwiki "Xbox Input Devices", SteelBattalion.NET (facts only).
+//! Verify with `sbc-capture led-probe`.
 
 use crate::input::gear_index;
 
-/// OUT report length.
-pub const LED_REPORT_LEN: usize = 34;
+/// OUT report length (XID `bMaxOutputReportSize`).
+pub const LED_REPORT_LEN: usize = 22;
+/// Fixed report header: report id 0, length.
+pub const LED_REPORT_HEADER: [u8; 2] = [0x00, 0x16];
+/// Lowest LED id (byte 2, low nibble).
+pub const FIRST_LED_ID: u8 = 4;
+/// Highest LED id (Gear 5, byte 20, high nibble).
+pub const LAST_LED_ID: u8 = 41;
 /// Maximum brightness.
 pub const LED_MAX_LEVEL: u8 = 15;
 /// Raw button bits that have an LED (vJoy 4..=33 → bits 3..=32).
@@ -49,8 +57,20 @@ impl Default for LedLevels {
     }
 }
 
-/// Set one LED nibble. Ids beyond the report are ignored.
+/// Report with header set and every LED off.
+#[must_use]
+pub const fn blank_report() -> [u8; LED_REPORT_LEN] {
+    let mut r = [0u8; LED_REPORT_LEN];
+    r[0] = LED_REPORT_HEADER[0];
+    r[1] = LED_REPORT_HEADER[1];
+    r
+}
+
+/// Set one LED nibble. Ids outside `FIRST_LED_ID..=LAST_LED_ID` are ignored (protects the header).
 pub fn set_level(report: &mut [u8; LED_REPORT_LEN], id: u8, level: u8) {
+    if !(FIRST_LED_ID..=LAST_LED_ID).contains(&id) {
+        return;
+    }
     let level = level.min(LED_MAX_LEVEL);
     let Some(byte) = report.get_mut(usize::from(id >> 1)) else {
         return;
@@ -67,7 +87,7 @@ pub fn set_level(report: &mut [u8; LED_REPORT_LEN], id: u8, level: u8) {
 /// Build a full report from a lit-button mask (from [`crate::LedLatch`]) and the gear value.
 #[must_use]
 pub fn encode(lit: u64, gear: i8, style: GearLedStyle, levels: LedLevels) -> [u8; LED_REPORT_LEN] {
-    let mut report = [0u8; LED_REPORT_LEN];
+    let mut report = blank_report();
     let lit = lit & LED_BUTTON_MASK;
     for b in 0..BUTTON_BITS {
         if LED_BUTTON_MASK & (1u64 << b) != 0 {
@@ -130,7 +150,38 @@ mod tests {
         assert_eq!(r[2], 0xF0);
         let r = encode(EJECT_BIT | HATCH_BIT, 0, GearLedStyle::Off, levels());
         assert_eq!(r[2], 0xFF);
-        assert_eq!(r.iter().filter(|b| **b != 0).count(), 1);
+        assert_eq!(r.get(2..).unwrap().iter().filter(|b| **b != 0).count(), 1);
+    }
+
+    #[test]
+    fn header_and_length_match_xid() {
+        let r = encode(
+            LED_BUTTON_MASK,
+            5,
+            GearLedStyle::Progressive,
+            LedLevels { on: 15, off: 15 },
+        );
+        assert_eq!(r.len(), 22);
+        assert_eq!((r[0], r[1]), (0x00, 0x16), "header survives every LED on");
+        assert_eq!(r[21], 0x00, "byte 21 unused");
+    }
+
+    #[test]
+    fn wiki_layout_spot_checks() {
+        // xboxdevwiki: byte 16 = Comm4 (low) / Comm5 (high); byte 20 = Gear4 / Gear5.
+        let comm5 = 1u64 << 32; // vJoy 33
+        assert_eq!(encode(comm5, 0, GearLedStyle::Off, levels())[16], 0xF0);
+        assert_eq!(encode(0, 5, GearLedStyle::Position, levels())[20], 0xF0);
+        assert_eq!(encode(0, 4, GearLedStyle::Position, levels())[20], 0x0F);
+    }
+
+    #[test]
+    fn set_level_ignores_header_and_unused_ids() {
+        let mut r = blank_report();
+        for id in [0, 1, 2, 3, 42, 43, 200] {
+            set_level(&mut r, id, 15);
+        }
+        assert_eq!(r, blank_report());
     }
 
     #[test]
@@ -138,7 +189,7 @@ mod tests {
         let aim_and_toggles = 0b111 | (0x3F << 33);
         assert_eq!(
             encode(aim_and_toggles, 0, GearLedStyle::Off, levels()),
-            [0; LED_REPORT_LEN]
+            blank_report()
         );
     }
 

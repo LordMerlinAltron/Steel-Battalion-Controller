@@ -18,6 +18,7 @@ SBC ──WinUSB──► sbc-bridge ──► vJoy ──► JoyToKey ──►
 
 ## Requirements
 - Windows 10/11 x64
+- Rust (MSVC toolchain) + Visual Studio C++ Build Tools — `setup\2-install-rust.cmd` installs both
 - [vJoy](https://github.com/jshafer817/vJoy) (signed build)
 - [Zadig](https://zadig.akeo.ie/) — one-time WinUSB binding for the controller
 - [JoyToKey](https://joytokey.net/) 6.2+ (128-button support)
@@ -35,14 +36,16 @@ cargo run -p sbc-capture -- info        # USB descriptors + endpoints
 cargo run -p sbc-capture -- watch       # live named controls
 cargo run -p sbc-capture -- raw         # raw 26-byte packets as hex
 cargo run -p sbc-capture -- led-probe   # light each LED id, print expected control
+cargo run -p sbc-capture -- calibrate --secs 40 --out config/calibration.toml
 ```
 
 ## Credits
 Protocol knowledge from:
+- [xboxdevwiki — Xbox Input Devices](https://xboxdevwiki.net/Xbox_Input_Devices) (USB/XID descriptors, 22-byte LED report, tuner and gear semantics)
 - [caosdoar/SteelBattalionDriver](https://github.com/caosdoar/SteelBattalionDriver) — Oscar Sebio Cajaraville, 2019 (input layout)
-- [SteelBattalion.NET](https://github.com/dmanning23/SteelBattalion.NET) — Joseph Coutcher, 2010 (endpoints, LED report)
+- [SteelBattalion.NET](https://github.com/dmanning23/SteelBattalion.NET) — Joseph Coutcher, 2010 (endpoints, LED ids)
 
-No code from either project is included.
+No code from these projects is included. See [docs/protocol.md](docs/protocol.md) for which source backs which fact.
 
 ## License
 MIT — see [LICENSE](LICENSE).
