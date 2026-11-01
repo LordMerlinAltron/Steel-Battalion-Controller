@@ -2,3 +2,4 @@
 *.pdb
 fixtures/local/
 logs/
+tools/*.exe
