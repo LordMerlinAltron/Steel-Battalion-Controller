@@ -17,14 +17,18 @@ const REST_TIME: Duration = Duration::from_secs(3);
 const READ_TIMEOUT: Duration = Duration::from_millis(100);
 /// Axes 0..5 are sticks/levers (centered); the rest are pedals (linear).
 const STICK_AXES: usize = 5;
-/// Pull each end in by span / this, so a full push reliably reaches the vJoy limit.
+/// Pull each end in by span / this, so a full push reliably reaches the vJoy limit
+/// and a released pedal reliably reads as zero.
 const EDGE_MARGIN_DIV: i32 = 64;
+/// Largest raw change allowed during the hands-off phase (sensor jitter is ~200).
+const REST_MAX_SPREAD: i32 = 1024;
 
 /// Per-axis measurements.
 #[derive(Clone, Copy, Debug)]
 struct Track {
     rest_sum: i64,
     rest_n: i64,
+    rest_min: i32,
     rest_max: i32,
     min: i32,
     max: i32,
@@ -35,6 +39,7 @@ impl Track {
         Self {
             rest_sum: 0,
             rest_n: 0,
+            rest_min: i32::MAX,
             rest_max: i32::MIN,
             min: i32::MAX,
             max: i32::MIN,
@@ -45,10 +50,16 @@ impl Track {
         if resting {
             self.rest_sum = self.rest_sum.saturating_add(i64::from(v));
             self.rest_n = self.rest_n.saturating_add(1);
+            self.rest_min = self.rest_min.min(v);
             self.rest_max = self.rest_max.max(v);
         }
         self.min = self.min.min(v);
         self.max = self.max.max(v);
+    }
+
+    /// Movement seen during the hands-off phase.
+    const fn rest_spread(&self) -> i32 {
+        self.rest_max.saturating_sub(self.rest_min)
     }
 
     fn rest_mean(&self) -> Option<i32> {
@@ -64,7 +75,8 @@ impl Track {
         let cal = if centered {
             AxisCal::centered(lo, self.rest_mean()?, hi)
         } else {
-            AxisCal::linear(self.rest_max, hi)
+            // Pedals spring back: released = lowest value seen, whatever the rest phase saw.
+            AxisCal::linear(lo, hi)
         };
         cal.validate().ok().map(|()| cal)
     }
@@ -119,7 +131,28 @@ fn measure(
     if tracks.iter().any(|t| t.rest_n == 0) {
         return Err("no reports during the rest phase; is the controller connected?".into());
     }
+    check_rest(&tracks)?;
     Ok(tracks)
+}
+
+/// Fail if anything moved while it should have been resting (a hand or foot on it).
+fn check_rest(tracks: &[Track; AXIS_COUNT]) -> Result<(), String> {
+    let moved: Vec<String> = AXIS_NAMES
+        .iter()
+        .zip(tracks.iter())
+        .take(STICK_AXES)
+        .filter(|(_, t)| t.rest_spread() > REST_MAX_SPREAD)
+        .map(|(n, t)| format!("{n} moved {}", t.rest_spread()))
+        .collect();
+    debug_assert!(moved.len() <= STICK_AXES);
+    if moved.is_empty() {
+        Ok(())
+    } else {
+        Err(format!(
+            "controls moved during HANDS OFF ({}); nothing saved, run again without touching the controller",
+            moved.join(", ")
+        ))
+    }
 }
 
 fn render(tracks: &[Track; AXIS_COUNT]) -> String {
@@ -183,12 +216,24 @@ mod tests {
     }
 
     #[test]
-    fn pedal_min_is_highest_rest_value() {
-        let t = tracked(&[4224, 4288], &[64_000]);
+    fn pedal_min_is_lowest_value_plus_margin() {
+        // A foot on the pedal during the rest phase must not shift the released point.
+        let t = tracked(&[32_640, 32_700], &[4224, 64_000]);
         let c = t.result(false).unwrap();
         assert_eq!(c.center, None);
-        assert_eq!(c.min, 4288);
+        assert_eq!(c.min, 4224 + (64_000 - 4224) / 64);
         assert!(c.max < 64_000);
+    }
+
+    #[test]
+    fn stick_moved_during_rest_is_rejected() {
+        let still = tracked(&[100, 228], &[-30_000, 30_000]);
+        let bumped = tracked(&[100, 9000], &[-30_000, 30_000]);
+        assert!(check_rest(&[still; AXIS_COUNT]).is_ok());
+        let mut set = [still; AXIS_COUNT];
+        set[1] = bumped;
+        let err = check_rest(&set).unwrap_err();
+        assert!(err.contains("aim_y moved 8900"));
     }
 
     #[test]
