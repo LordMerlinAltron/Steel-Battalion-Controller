@@ -1,6 +1,5 @@
 //! One connected-controller session: USB read → decode → vJoy, plus LED writes.
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use sbc_core::{PadMapper, SbcState, decode};
@@ -9,7 +8,7 @@ use sbc_vjoy::{Vjoy, VjoyError};
 
 use crate::config::Config;
 use crate::leds::LedDriver;
-use crate::log;
+use crate::runtime::{Logger, Stop};
 
 const LED_WRITE_TIMEOUT: Duration = Duration::from_millis(200);
 /// Consecutive short/undecodable packets before the session gives up.
@@ -32,6 +31,7 @@ pub enum SessionEnd {
 pub struct Session<'a> {
     dev: SbcDevice,
     vjoy: &'a Vjoy,
+    log: &'a Logger,
     timeout: Duration,
     mapper: PadMapper,
     leds: Option<LedDriver>,
@@ -42,8 +42,8 @@ pub struct Session<'a> {
 
 impl<'a> Session<'a> {
     /// Wrap an opened device.
-    pub fn new(dev: SbcDevice, vjoy: &'a Vjoy, cfg: &Config) -> Self {
-        let leds_ok = cfg.leds.enabled && check_xid(&dev);
+    pub fn new(dev: SbcDevice, vjoy: &'a Vjoy, cfg: &Config, log: &'a Logger) -> Self {
+        let leds_ok = cfg.leds.enabled && check_xid(&dev, log);
         let leds = leds_ok.then(|| {
             LedDriver::new(
                 cfg.led_modes(),
@@ -55,6 +55,7 @@ impl<'a> Session<'a> {
         let mut s = Self {
             dev,
             vjoy,
+            log,
             timeout: Duration::from_millis(cfg.usb.read_timeout_ms),
             mapper: PadMapper::new(cfg.vjoy.pulse_ms),
             leds,
@@ -68,9 +69,9 @@ impl<'a> Session<'a> {
     }
 
     /// Run until stop, error, or unplug.
-    pub fn run(&mut self, stop: &AtomicBool) -> SessionEnd {
+    pub fn run(&mut self, stop: &Stop) -> SessionEnd {
         let mut buf = [0u8; MAX_REPORT];
-        while !stop.load(Ordering::Relaxed) {
+        while !stop.requested() {
             if let Err(end) = self.step(&mut buf) {
                 return end;
             }
@@ -122,7 +123,7 @@ impl<'a> Session<'a> {
     /// LED failures are not fatal: log once and disable LEDs for this session.
     fn write_leds(&mut self, report: &[u8]) {
         if let Err(e) = self.dev.write(report, LED_WRITE_TIMEOUT) {
-            log(&format!(
+            self.log.line(&format!(
                 "LED write failed ({e}); LEDs disabled until reconnect"
             ));
             self.leds = None;
@@ -136,11 +137,11 @@ impl<'a> Session<'a> {
 }
 
 /// Log the XID descriptor; LEDs stay enabled unless the device reports a different output size.
-fn check_xid(dev: &SbcDevice) -> bool {
+fn check_xid(dev: &SbcDevice, log: &Logger) -> bool {
     let raw = match dev.xid_descriptor() {
         Ok(r) => r,
         Err(e) => {
-            log(&format!(
+            log.line(&format!(
                 "XID descriptor unavailable ({e}); assuming 22-byte LED report"
             ));
             return true;
@@ -148,14 +149,14 @@ fn check_xid(dev: &SbcDevice) -> bool {
     };
     match sbc_core::xid::parse(&raw) {
         Ok(x) if usize::from(x.max_output) == sbc_core::LED_REPORT_LEN => {
-            log(&format!(
+            log.line(&format!(
                 "XID type {:02X}/{:02X}, in {} out {}",
                 x.device_type, x.sub_type, x.max_input, x.max_output
             ));
             true
         }
         Ok(x) => {
-            log(&format!(
+            log.line(&format!(
                 "XID output report is {} bytes, expected {}; LEDs disabled",
                 x.max_output,
                 sbc_core::LED_REPORT_LEN
@@ -163,7 +164,7 @@ fn check_xid(dev: &SbcDevice) -> bool {
             false
         }
         Err(e) => {
-            log(&format!(
+            log.line(&format!(
                 "XID descriptor unreadable ({e:?}); assuming 22-byte LED report"
             ));
             true

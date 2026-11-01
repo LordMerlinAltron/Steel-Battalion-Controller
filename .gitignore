@@ -3,3 +3,4 @@
 fixtures/local/
 logs/
 tools/*.exe
+bin/

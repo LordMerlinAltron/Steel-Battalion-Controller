@@ -36,8 +36,11 @@ Approach: user-mode bridge. **No custom kernel driver, no driver signing, Secure
 - [x] Config from `sbc-bridge.toml` next to exe, else `config/default.toml`
 
 ## P4 — Plug and play
-- [ ] Start at logon (Task Scheduler), hidden, single instance
-- [ ] Log file, rotate
+- [x] Start at logon (Startup shortcut, no admin), hidden (no console in release builds), single instance (exclusive lock file)
+- [x] Log file `logs\bridge.log`, rotated at 1 MB
+- [x] Clean stop via `bin\sbc-bridge.stop` (vJoy → neutral); waits for vJoy at boot
+- [x] `setup\5-install-bridge.cmd`, `bridge-start/stop.cmd`, `6-uninstall-bridge.cmd`
+- [ ] Verified on hardware
 - [ ] Optional tray icon
 
 ## P5 — JoyToKey
